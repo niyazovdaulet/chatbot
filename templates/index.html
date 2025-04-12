@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Information Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: rgba(79, 70, 229, 0.1);
+            --background-color: #f9fafb;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --success-color: #10b981;
+            --error-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background-image: 
+                radial-gradient(at 40% 20%, rgba(79, 70, 229, 0.1) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, rgba(79, 70, 229, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, rgba(79, 70, 229, 0.1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, rgba(79, 70, 229, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(79, 70, 229, 0.1) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, rgba(79, 70, 229, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.1) 0px, transparent 50%);
+        }
+
+        .container {
+            background-color: var(--card-background);
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 800px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), #8b5cf6, #ec4899);
+        }
+
+        h1 {
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            background: linear-gradient(90deg, var(--primary-color), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab i {
+            font-size: 1.1rem;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            font-weight: 600;
+            background-color: var(--primary-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .chat-box {
+            background-color: var(--background-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .input-area {
+            display: flex;
+            gap: 1rem;
+            position: relative;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: var(--card-background);
+            box-shadow: var(--shadow-sm);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        button {
+            padding: 0.875rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            margin: 1rem 0;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            max-width: 80%;
+            animation: slideIn 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+        }
+
+        .user-message {
+            background-color: var(--primary-color);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 0.5rem;
+        }
+
+        .bot-message {
+            background-color: var(--card-background);
+            color: var(--text-primary);
+            margin-right: auto;
+            border-bottom-left-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .message::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            width: 20px;
+            height: 20px;
+        }
+
+        .user-message::before {
+            right: -10px;
+            border-bottom-left-radius: 16px;
+            border-right: 20px solid var(--primary-color);
+        }
+
+        .bot-message::before {
+            left: -10px;
+            border-bottom-right-radius: 16px;
+            border-left: 20px solid var(--card-background);
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            color: var(--primary-hover);
+        }
+
+        .welcome-content {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .welcome-content h2 {
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .welcome-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .welcome-content ul {
+            list-style: none;
+            text-align: left;
+            max-width: 500px;
+            margin: 1.5rem auto;
+            background-color: var(--background-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .welcome-content li {
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .welcome-content li:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .welcome-content li i {
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            margin-top: 0.25rem;
+        }
+
+        .welcome-content li strong {
+            color: var(--primary-color);
+        }
+
+        .coming-soon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .coming-soon i {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            opacity: 0.7;
+        }
+
+        .coming-soon h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .coming-soon p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1.5rem;
+            }
+
+            .tabs {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .tab {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+        }
+
+        .message.bot {
+            background-color: #f0f0f0;
+            margin-right: 20%;
+        }
+        
+        .result-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .result-link:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Company Information Portal</h1>
+        <div class="tabs">
+            <button class="tab active" onclick="openTab(event, 'home')">
+                <i class="fas fa-home"></i> Home
+            </button>
+            <button class="tab" onclick="openTab(event, 'stock')">
+                <i class="fas fa-chart-line"></i> Public/Private Company
+            </button>
+            <button class="tab" onclick="openTab(event, 'bulgarian')">
+                <i class="fas fa-building"></i> Bulgarian CIP
+            </button>
+            <button class="tab" onclick="openTab(event, 'polish')">
+                <i class="fas fa-building"></i> Polish CIP
+            </button>
+        </div>
+
+        <div id="home" class="tab-content active">
+            <div class="welcome-content">
+                <h2>Welcome to Company Information Portal</h2>
+                <p>This portal helps you find information about companies:</p>
+                <ul>
+                    <li>
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <strong>Public/Private Company:</strong> Check if a company is publicly traded, get their free float percentage, and access their Financial Times profile
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-building"></i>
+                        <div>
+                            <strong>Bulgarian CIP:</strong> Search for Bulgarian companies using their Unique Identification Code (UIC)
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-building"></i>
+                        <div>
+                            <strong>Polish CIP:</strong> Coming soon - Information about Polish companies
+                        </div>
+                    </li>
+                </ul>
+                <p>Select a tab above to get started!</p>
+            </div>
+        </div>
+
+        <div id="stock" class="tab-content">
+            <div class="chat-box" id="stockChatBox"></div>
+            <div class="input-area">
+                <input type="text" id="companyInput" placeholder="Enter company name (e.g., Ayala Corporation)" onkeypress="handleKeyPress(event)">
+                <button onclick="checkCompany()">
+                    <i class="fas fa-search"></i> Check
+                </button>
+            </div>
+        </div>
+
+        <div id="bulgarian" class="tab-content">
+            <div class="chat-box" id="bulgarianChatBox"></div>
+            <div class="input-area">
+                <input type="text" id="uicInput" placeholder="Enter UIC (e.g., 831815352)" onkeypress="handleUicKeyPress(event)">
+                <button onclick="checkUic()">
+                    <i class="fas fa-id-card"></i> Check UIC
+                </button>
+            </div>
+        </div>
+
+        <div id="polish" class="tab-content">
+            <div class="coming-soon">
+                <i class="fas fa-building pulse"></i>
+                <h2>Polish CIP</h2>
+                <p>This feature is coming soon!</p>
+                <p>We're working on adding functionality to search for Polish companies.</p>
+                <p>Please check back later for updates.</p>
+                <span class="badge">Coming Soon</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        function addMessage(message, isUser, chatBoxId) {
+            const chatBox = document.getElementById(chatBoxId);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            if (urlRegex.test(message)) {
+                messageDiv.innerHTML = message.replace(urlRegex, url => `<a href="${url}" target="_blank">${url}</a>`);
+            } else {
+                messageDiv.textContent = message;
+            }
+            
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                checkCompany();
+            }
+        }
+
+        function checkCompany() {
+            const companyName = document.getElementById('companyInput').value.trim();
+            if (!companyName) {
+                alert('Please enter a company name');
+                return;
+            }
+
+            addMessage(companyName, true, 'stockChatBox');
+            document.getElementById('companyInput').value = '';
+            
+            fetch('/check_company', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ company_name: companyName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage(data.message, false, 'stockChatBox');
+                } else {
+                    addMessage(data.message || 'Company not found', false, 'stockChatBox');
+                }
+            })
+            .catch(error => {
+                addMessage('Error: ' + error.message, false, 'stockChatBox');
+            });
+        }
+
+        function handleUicKeyPress(event) {
+            if (event.key === 'Enter') {
+                checkUic();
+            }
+        }
+
+        function checkUic() {
+            const uic = document.getElementById('uicInput').value.trim();
+            if (!uic) {
+                addMessage('Please enter a UIC', false, 'bulgarianChatBox');
+                return;
+            }
+
+            addMessage(`Checking UIC: ${uic}`, true, 'bulgarianChatBox');
+            document.getElementById('uicInput').value = '';
+
+            fetch('/check_company', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ uic: uic })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage(data.message, false, 'bulgarianChatBox');
+                    if (data.search_url) {
+                        const linkMessage = document.createElement('div');
+                        linkMessage.className = 'message bot-message';
+                        linkMessage.innerHTML = `<a href="${data.search_url}" target="_blank" class="result-link">View Company Status</a>`;
+                        document.getElementById('bulgarianChatBox').appendChild(linkMessage);
+                    }
+                } else {
+                    addMessage(data.message, false, 'bulgarianChatBox');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessage('An error occurred while checking the UIC. Please try again.', false, 'bulgarianChatBox');
+            });
+        }
+    </script>
+</body>
+</html> 
