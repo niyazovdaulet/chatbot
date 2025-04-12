@@ -311,19 +311,70 @@ def generate_company_pdf(uic):
         driver.get(url)
         logger.info(f"Navigated to URL: {url}")
         
-        # Wait for and accept cookies if present
+        # Wait for and handle cookies - more comprehensive approach
         try:
-            # Wait for cookie consent button with various possible selectors
-            cookie_button = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 
-                    '[id*="cookie"], [class*="cookie"] button, [id*="consent"], [class*="consent"] button, [aria-label*="cookie"], [title*="cookie"]'
-                ))
+            # First try the specific "Accept" button for this site
+            accept_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]"))
             )
-            cookie_button.click()
-            logger.info("Accepted cookies")
-            driver.implicitly_wait(1)  # Wait for cookie banner to disappear
+            driver.execute_script("arguments[0].click();", accept_button)
+            logger.info("Clicked Accept button")
         except Exception as e:
-            logger.warning(f"Cookie acceptance failed or not needed: {str(e)}")
+            logger.warning(f"First cookie acceptance attempt failed: {str(e)}")
+            try:
+                # Try alternative methods to accept cookies
+                cookie_selectors = [
+                    "button.accept-cookies",
+                    "button[data-cookiebanner='accept_button']",
+                    "#cookie-accept",
+                    ".cookie-accept",
+                    "button:contains('Accept')",
+                    "button.cookies-accept",
+                    "[aria-label*='Accept cookies']",
+                    "[title*='Accept cookies']"
+                ]
+                
+                for selector in cookie_selectors:
+                    try:
+                        element = driver.find_element(By.CSS_SELECTOR, selector)
+                        driver.execute_script("arguments[0].click();", element)
+                        logger.info(f"Clicked cookie accept button with selector: {selector}")
+                        break
+                    except:
+                        continue
+                
+                # If still not accepted, try JavaScript approach
+                driver.execute_script("""
+                    document.querySelectorAll('button').forEach(button => {
+                        if (button.textContent.toLowerCase().includes('accept')) {
+                            button.click();
+                        }
+                    });
+                """)
+                
+                # Additional fallback: Set cookies directly
+                driver.execute_script("""
+                    localStorage.setItem('cookieConsent', 'true');
+                    localStorage.setItem('cookies_accepted', 'true');
+                """)
+                
+            except Exception as e2:
+                logger.warning(f"Alternative cookie acceptance methods failed: {str(e2)}")
+        
+        # Wait to ensure cookie banner is gone
+        driver.implicitly_wait(2)
+        
+        # Ensure the cookie banner is really gone before proceeding
+        try:
+            driver.execute_script("""
+                document.querySelectorAll('[class*="cookie"], [id*="cookie"]').forEach(el => {
+                    if (el.style.display !== 'none') {
+                        el.style.display = 'none';
+                    }
+                });
+            """)
+        except Exception as e:
+            logger.warning(f"Failed to hide remaining cookie elements: {str(e)}")
         
         # Wait for specific elements that indicate the page has loaded
         try:
