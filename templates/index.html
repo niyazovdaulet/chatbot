@@ -418,6 +418,23 @@
         .result-link:hover {
             background-color: #45a049;
         }
+
+        .pdf-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-left: 10px;
+        }
+        
+        .pdf-link:hover {
+            background-color: #1976D2;
+        }
     </style>
 </head>
 <body>
@@ -588,7 +605,12 @@
                     if (data.search_url) {
                         const linkMessage = document.createElement('div');
                         linkMessage.className = 'message bot-message';
-                        linkMessage.innerHTML = `<a href="${data.search_url}" target="_blank" class="result-link">View Company Status</a>`;
+                        linkMessage.innerHTML = `
+                            <a href="${data.search_url}" target="_blank" class="result-link">View Company Status</a>
+                            <a href="/download_pdf/${data.pdf_filename}" class="pdf-link">
+                                <i class="fas fa-file-pdf"></i> Download PDF
+                            </a>
+                        `;
                         document.getElementById('bulgarianChatBox').appendChild(linkMessage);
                     }
                 } else {

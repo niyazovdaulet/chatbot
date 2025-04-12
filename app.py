@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -8,6 +8,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import logging
+import base64
+import os
+import json
 
 app = Flask(__name__)
 
@@ -254,6 +257,142 @@ def generate_uic_url(uic):
     """
     return f"https://portal.registryagency.bg/CR/Reports/ActiveConditionTabResult?uic={uic}"
 
+def generate_company_pdf(uic):
+    """
+    Generate a PDF of the company status page using headless Chrome.
+    
+    Args:
+        uic (str): The UIC of the company.
+        
+    Returns:
+        tuple: (pdf_path, error_message) if successful, (None, error_message) otherwise.
+    """
+    logger.info(f"Generating PDF for UIC: {uic}")
+    
+    try:
+        # Prepare Chrome for headless print
+        options = uc.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--window-size=1920,1080')
+        options.add_experimental_option('prefs', {
+            'printing.print_preview_sticky_settings.appState': json.dumps({
+                "recentDestinations": [{
+                    "id": "Save as PDF",
+                    "origin": "local",
+                    "account": ""
+                }],
+                "selectedDestinationId": "Save as PDF",
+                "version": 2,
+                "isHeaderFooterEnabled": True,
+                "isLandscapeEnabled": False,
+                "mediaSize": {
+                    "name": "LEGAL",
+                    "width_microns": 215900,
+                    "height_microns": 355600,
+                    "custom_display_name": "Legal"
+                }
+            })
+        })
+        options.add_argument('--kiosk-printing')
+        
+        driver = uc.Chrome(options=options, version_main=134)
+        logger.info("Chrome driver initialized successfully")
+        
+        # Set page load timeout
+        driver.set_page_load_timeout(30)
+        
+        # Construct the URL
+        url = f"https://portal.registryagency.bg/CR/en/Reports/ActiveConditionTabResult?uic={uic}"
+        
+        # Navigate to the page
+        driver.get(url)
+        logger.info(f"Navigated to URL: {url}")
+        
+        # Wait for and accept cookies if present
+        try:
+            # Wait for cookie consent button with various possible selectors
+            cookie_button = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 
+                    '[id*="cookie"], [class*="cookie"] button, [id*="consent"], [class*="consent"] button, [aria-label*="cookie"], [title*="cookie"]'
+                ))
+            )
+            cookie_button.click()
+            logger.info("Accepted cookies")
+            driver.implicitly_wait(1)  # Wait for cookie banner to disappear
+        except Exception as e:
+            logger.warning(f"Cookie acceptance failed or not needed: {str(e)}")
+        
+        # Wait for specific elements that indicate the page has loaded
+        try:
+            # Wait for the main content to load (adjust the selector based on the actual page structure)
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "company-details"))
+            )
+            # Add a small delay to ensure dynamic content is loaded
+            driver.implicitly_wait(2)
+            
+            # Scroll to bottom to ensure all content is loaded
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            driver.implicitly_wait(1)
+            
+            # Scroll back to top
+            driver.execute_script("window.scrollTo(0, 0);")
+            driver.implicitly_wait(1)
+            
+        except Exception as e:
+            logger.warning(f"Waiting for specific elements failed: {str(e)}. Falling back to general wait.")
+            # If specific element wait fails, fall back to a general wait
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            # Wait additional time for any dynamic content
+            driver.implicitly_wait(5)
+        
+        logger.info("Page content loaded successfully")
+        
+        # Use DevTools Protocol to print to PDF with better settings
+        pdf = driver.execute_cdp_cmd("Page.printToPDF", {
+            "printBackground": True,
+            "marginTop": 0.5,
+            "marginBottom": 0.5,
+            "marginLeft": 0.5,
+            "marginRight": 0.5,
+            "paperWidth": 8.5,  # Legal width in inches
+            "paperHeight": 14,   # Legal height in inches
+            "scale": 0.9,       # Slightly scale down to ensure content fits
+            "displayHeaderFooter": True,
+            "headerTemplate": "<div style='font-size: 8px; margin-left: 20px;'><span class='date'></span></div>",
+            "footerTemplate": "<div style='font-size: 8px; margin-left: 20px; margin-right: 20px;'><span class='pageNumber'></span> / <span class='totalPages'></span> <span style='float: right;'><span class='url'></span></span></div>"
+        })
+        
+        # Create a directory for PDFs if it doesn't exist
+        pdf_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pdfs')
+        os.makedirs(pdf_dir, exist_ok=True)
+        
+        # Decode and save the PDF
+        pdf_data = base64.b64decode(pdf['data'])
+        filename = f"{uic}_status_report.pdf"
+        pdf_path = os.path.join(pdf_dir, filename)
+        
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_data)
+        
+        logger.info(f"PDF generated successfully: {pdf_path}")
+        return pdf_path, None
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF: {str(e)}")
+        return None, str(e)
+    finally:
+        try:
+            if 'driver' in locals():
+                driver.quit()
+        except Exception as e:
+            logger.error(f"Error closing driver: {str(e)}")
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -279,11 +418,20 @@ def check_company():
         # Generate the direct URL
         result_url = generate_uic_url(uic)
         
+        # Generate the PDF
+        pdf_path, error = generate_company_pdf(uic)
+        if error:
+            return jsonify({
+                'success': False,
+                'message': f"Error generating PDF: {error}"
+            })
+        
         return jsonify({
             'success': True,
             'message': f"Here is the direct link to the company's status page:",
             'search_url': result_url,
-            'details_url': result_url
+            'details_url': result_url,
+            'pdf_filename': os.path.basename(pdf_path)
         })
     
     # Handle company name-based search (existing functionality)
@@ -319,6 +467,25 @@ def check_company():
         # Use the existing FT search for non-Cyrillic company names
         result = search_ft_company(company_name)
         return jsonify(result)
+
+@app.route('/download_pdf/<filename>')
+def download_pdf(filename):
+    """
+    Serve the generated PDF file.
+    """
+    try:
+        pdf_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pdfs')
+        return send_file(
+            os.path.join(pdf_dir, filename),
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        logger.error(f"Error serving PDF file: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f"Error serving PDF file: {str(e)}"
+        }), 404
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001) 
